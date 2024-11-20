@@ -13,40 +13,43 @@ class Engine(object):
     """
 
     def __init__(self, config):
-        self.config = config  # model configuration
-        self.server_opt = torch.optim.Adam(self.server_model.parameters(), lr=config['lr_server'],
+        self.config = config  # model configuration 
+        self.server_opt = torch.optim.Adam(self.server_model.parameters(), lr=config['lr_server'], # 服务器端优化器
                                            weight_decay=config['l2_regularization'])
-        self.server_model_param = {}
-        self.client_model_params = {}
-        self.client_crit = torch.nn.BCELoss()
-        self.server_crit = torch.nn.MSELoss()
+        
+        self.server_model_param = {} # 服务器端参数
+        self.client_model_params = {} # 客户端参数
+        
+        self.client_crit = torch.nn.BCELoss() # 二元交叉熵损失 L_local
+        self.server_crit = torch.nn.MSELoss() # 为均方误差损失 
 
     def instance_user_train_loader(self, user_train_data):
-        """instance a user's train loader."""
-        dataset = UserItemRatingDataset(user_tensor=torch.LongTensor(user_train_data[0]),
+        """instance a user's train loader.""" # 实例化用户的训练数据加载器
+        dataset = UserItemRatingDataset(user_tensor=torch.LongTensor(user_train_data[0]), # 来自data.py的类，使得数据便于被DataLoader加载
                                         item_tensor=torch.LongTensor(user_train_data[1]),
                                         target_tensor=torch.FloatTensor(user_train_data[2]))
-        return DataLoader(dataset, batch_size=self.config['batch_size'], shuffle=True)
+        return DataLoader(dataset, batch_size=self.config['batch_size'], shuffle=True) # shuffle=True 在每个epoch（训练周期）开始时打乱数据
 
     def fed_train_single_batch(self, model_client, batch_data, optimizers):
-        """train a batch and return an updated model."""
+        """train a batch and return an updated model.""" # 在用户端训练一个batch并更新
         # load batch data.
-        _, items, ratings = batch_data[0], batch_data[1], batch_data[2]
-        ratings = ratings.float()
-        reg_item_embedding = copy.deepcopy(self.server_model_param['global_item_rep'])
+        _, items, ratings = batch_data[0], batch_data[1], batch_data[2] # _是一个常用的占位符变量名，表示这部分的值不会被使用
+        ratings = ratings.float() # 便于计算
+        reg_item_embedding = copy.deepcopy(self.server_model_param['global_item_rep']) # 服务器中复制全局item_embedding
 
-        if self.config['use_cuda'] is True:
+        if self.config['use_cuda'] is True: 
             items, ratings = items.cuda(), ratings.cuda()
             reg_item_embedding = reg_item_embedding.cuda()
 
         optimizer, optimizer_u, optimizer_i = optimizers
         # update score function.
+        # 联邦学习中不同的部分往往采取不同的优化器
         optimizer.zero_grad()
         optimizer_u.zero_grad()
         optimizer_i.zero_grad()
         ratings_pred = model_client(items)
         loss = self.client_crit(ratings_pred.view(-1), ratings)
-        regularization_term = compute_regularization(model_client, reg_item_embedding)
+        regularization_term = compute_regularization(model_client, reg_item_embedding) 
         loss += self.config['reg'] * regularization_term
         loss.backward()
         optimizer.step()
@@ -71,7 +74,7 @@ class Engine(object):
         for key in self.server_model_param.keys():
             self.server_model_param[key].data = self.server_model_param[key].data / len(round_user_params)
 
-        # train the item representation learning module.
+        # train the item representation learning module. 元属性网络
         item_content = torch.tensor(item_content)
         target = self.server_model_param['embedding_item.weight'].data
         if self.config['use_cuda'] is True:
@@ -87,7 +90,8 @@ class Engine(object):
 
         # store the global item representation learned by server model.
         self.server_model.eval()
-        with torch.no_grad():
+        # 在不计算梯度的情况下，通过服务器模型前向传播 item_content，得到全局物品表示。
+        with torch.no_grad(): 
             global_item_rep = self.server_model(item_content)
         self.server_model_param['global_item_rep'] = global_item_rep
 
@@ -112,7 +116,7 @@ class Engine(object):
             self.server_model_param['global_item_rep'] = global_item_rep
 
         # store users' model parameters of current round.
-        round_participant_params = {}
+        round_participant_params = {} # 初始化一个字典储存本轮参加更新的用户
         # perform model update for each participated user.
         for user in participants:
             # copy the client model architecture from self.client_model
