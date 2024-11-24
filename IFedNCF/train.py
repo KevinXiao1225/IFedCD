@@ -7,40 +7,43 @@ from mlp import MLPEngine
 from utils import *
 
 
-# Training settings
+# Training settings 训练设置，在命令行中添加
 parser = argparse.ArgumentParser()
 parser.add_argument('--alias', type=str, default='fedcs')
-parser.add_argument('--clients_sample_ratio', type=float, default=1.0)
+parser.add_argument('--clients_sample_ratio', type=float, default=1.0) # 设置客户端样本比率
 parser.add_argument('--clients_sample_num', type=int, default=0)
 parser.add_argument('--num_round', type=int, default=100)
 parser.add_argument('--local_epoch', type=int, default=1)
 parser.add_argument('--server_epoch', type=int, default=1)
-parser.add_argument('--lr_eta', type=int, default=80)
-parser.add_argument('--reg', type=float, default=1.0)
-parser.add_argument('--batch_size', type=int, default=256)
-parser.add_argument('--optimizer', type=str, default='sgd')
+parser.add_argument('--lr_eta', type=int, default=80) # 学习率的衰减点
+parser.add_argument('--reg', type=float, default=1.0) # 正则化参数
+parser.add_argument('--batch_size', type=int, default=256) # 默认批次大小，根据论文为256（E部分）
+parser.add_argument('--optimizer', type=str, default='sgd') # 默认优化器为SGD
+
+# 服务器和客户端的学习率
 parser.add_argument('--lr_client', type=float, default=0.5)
 parser.add_argument('--lr_server', type=float, default=0.005)
+
 parser.add_argument('--dataset', type=str, default='CiteULike')
-parser.add_argument('--num_users', type=int)
-parser.add_argument('--num_items_train', type=int)
+parser.add_argument('--num_users', type=int) # 用于设置用户数量
+parser.add_argument('--num_items_train', type=int) # 设置训练集中item数
 parser.add_argument('--num_items_vali', type=int)
 parser.add_argument('--num_items_test', type=int)
-parser.add_argument('--content_dim', type=int)
-parser.add_argument('--latent_dim', type=int, default=200)
-parser.add_argument('--num_negative', type=int, default=5)
+parser.add_argument('--content_dim', type=int) # 特征维度（元属性网络输入维度）
+parser.add_argument('--latent_dim', type=int, default=200) # 潜在特征的维度，默认为200（即原文元属性网络的输出维度）
+parser.add_argument('--num_negative', type=int, default=5) # 负采样比为5，见论文E部分
 parser.add_argument('--server_model_layers', type=str, default='300')
 parser.add_argument('--client_model_layers', type=str, default='400, 200')
-parser.add_argument('--recall_k', type=str, default='20, 50, 100')
+parser.add_argument('--recall_k', type=str, default='20, 50, 100') # top-k精度的k值取值，见论文表格
 parser.add_argument('--l2_regularization', type=float, default=0.)
 parser.add_argument('--use_cuda', type=bool, default=True)
 parser.add_argument('--device_id', type=int, default=1)
 args = parser.parse_args()
 
 # Model.
-config = vars(args)
+config = vars(args) # 将args对象转换成字典，方便后续调用
 if len(config['recall_k']) > 1:
-    config['recall_k'] = [int(item) for item in config['recall_k'].split(',')]
+    config['recall_k'] = [int(item) for item in config['recall_k'].split(',')] # 如果参数包含多个值，则将其分割并转换为整数列表
 else:
     config['recall_k'] = [int(config['recall_k'])]
 if len(config['server_model_layers']) > 1:
@@ -77,21 +80,24 @@ elif config['dataset'] == 'XING_20000':
     config['content_dim'] = 2738
 else:
     pass
+
 engine = MLPEngine(config)
 
 # Logging.
 path = 'log/'
-current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') # 获取当前的日期和时间，并将其格式化为年-月-日 时:分:秒的格式
 logname = os.path.join(path, current_time+'.txt')
 initLogging(logname)
 
 # Load Data
 dataset_dir = "../data/" + config['dataset']
-data_dict = load_data(dataset_dir)
+data_dict = load_data(dataset_dir) # 调用load_data函数(在utils中定义)，从指定的数据目录加载数据，并将返回的数据字典存储在data_dict中
+
 # train, validation and test data with (uid, iid) dataframe format.
 train_data = data_dict['train']
 vali_data = data_dict['vali']
 test_data = data_dict['test']
+
 # train, validation, test cold-start item information, including item raw feature and reindex item id dict {ori_id: reindex_id}
 train_item_content = data_dict['train_item_content']
 user_ids = data_dict['user_ids']
@@ -108,8 +114,10 @@ test_precisions = []
 test_ndcgs = []
 best_recall = 0
 final_test_round = 0
+
 for round in range(config['num_round']):
     # break
+    # 每一轮开始，日志生成分割线和当前轮次
     logging.info('-' * 80)
     logging.info('-' * 80)
     logging.info('Round {} starts !'.format(round))

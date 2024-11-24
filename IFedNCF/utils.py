@@ -168,19 +168,20 @@ def compute_metrics(evaluate_data, user_item_preds, item_ids_map, recall_k):
         (np.ones(len(evaluate_data)),
          (target_rows, target_columns)),
         shape=[len(pred), len(item_ids_map)]
-    )
+    ) # 目标矩阵行表述用户，列表示项目，所以记录的行列处置为1，代表一个交互
     recall, precision, ndcg = [], [], []
     idcg_array = np.arange(recall_k[-1]) + 1
     idcg_array = 1 / np.log2(idcg_array + 1)
     idcg_table = np.zeros(recall_k[-1])
     for i in range(recall_k[-1]):
-        idcg_table[i] = np.sum(idcg_array[:(i + 1)])
+        idcg_table[i] = np.sum(idcg_array[:(i + 1)]) # 切片
     for at_k in recall_k:
         preds_k = pred[:, :at_k]
         x = sp.lil_matrix(target.shape)
         x.rows = preds_k
         x.data = np.ones_like(preds_k)
-
+        
+        # 计算召回率和准确率，target为实际冷启动场景交互情况，x为模型预测情况
         z = np.multiply(target.todense(), x.todense())
         recall.append(np.mean(np.divide((np.sum(z, 1)), np.sum(target, 1))))
         precision.append(np.mean(np.sum(z, 1) / at_k))
