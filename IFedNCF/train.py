@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--alias', type=str, default='fedcs')
 parser.add_argument('--clients_sample_ratio', type=float, default=1.0) # 设置客户端样本比率
 parser.add_argument('--clients_sample_num', type=int, default=0)
-parser.add_argument('--num_round', type=int, default=100)
+parser.add_argument('--num_round', type=int, default=5) # 原本设置为100，此处为测试设置为5
 parser.add_argument('--local_epoch', type=int, default=1)
 parser.add_argument('--server_epoch', type=int, default=1)
 parser.add_argument('--lr_eta', type=int, default=80) # 学习率的衰减点
@@ -31,7 +31,7 @@ parser.add_argument('--num_items_vali', type=int)
 parser.add_argument('--num_items_test', type=int)
 parser.add_argument('--content_dim', type=int) # 特征维度（元属性网络输入维度）
 parser.add_argument('--latent_dim', type=int, default=200) # 潜在特征的维度，默认为200（即原文元属性网络的输出维度）
-parser.add_argument('--num_negative', type=int, default=5) # 负采样比为5，见论文E部分
+parser.add_argument('--num_negative', type=int, default=5) # 负例采样比为5，见论文E部分
 parser.add_argument('--server_model_layers', type=str, default='300')
 parser.add_argument('--client_model_layers', type=str, default='400, 200')
 parser.add_argument('--recall_k', type=str, default='20, 50, 100') # top-k精度的k值取值，见论文表格
@@ -85,12 +85,12 @@ engine = MLPEngine(config)
 
 # Logging.
 path = 'log/'
-current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') # 获取当前的日期和时间，并将其格式化为年-月-日 时:分:秒的格式
+current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S').replace(':','-') # 获取当前的日期和时间，并将其格式化为年-月-日 时:分:秒的格式
 logname = os.path.join(path, current_time+'.txt')
-initLogging(logname)
+initLogging(logname) # initLogging()方法见utils.py
 
 # Load Data
-dataset_dir = "../data/" + config['dataset']
+dataset_dir = "D:/GitRepository/IFedRec/data/" + config['dataset']
 data_dict = load_data(dataset_dir) # 调用load_data函数(在utils中定义)，从指定的数据目录加载数据，并将返回的数据字典存储在data_dict中
 
 # train, validation and test data with (uid, iid) dataframe format.
@@ -122,14 +122,17 @@ for round in range(config['num_round']):
     logging.info('-' * 80)
     logging.info('Round {} starts !'.format(round))
 
-    all_train_data = negative_sampling(train_data, config['num_negative'])
+    all_train_data = negative_sampling(train_data, config['num_negative']) # 方法见utils.py
+    
     logging.info('-' * 80)
     logging.info('Training phase!')
     engine.fed_train_a_round(user_ids, all_train_data, round, train_item_content)
 
     logging.info('-' * 80)
     logging.info('Testing phase!')
+    
     test_recall, test_precision, test_ndcg = engine.fed_evaluate(test_data, test_item_content, test_item_ids_map)
+    
     logging.info('Recall@{} = {:.6f}, Recall@{} = {:.6f}, Recall@{} = {:.6f}'.format(
         config['recall_k'][0], test_recall[0],
         config['recall_k'][1], test_recall[1],
@@ -151,7 +154,9 @@ for round in range(config['num_round']):
 
     logging.info('-' * 80)
     logging.info('Validating phase!')
+    
     vali_recall, vali_precision, vali_ndcg = engine.fed_evaluate(vali_data, vali_item_content, vali_item_ids_map)
+    
     logging.info('Recall@{} = {:.6f}, Recall@{} = {:.6f}, Recall@{} = {:.6f}'.format(
         config['recall_k'][0], vali_recall[0],
         config['recall_k'][1], vali_recall[1],
