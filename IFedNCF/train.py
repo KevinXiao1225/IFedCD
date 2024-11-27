@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--alias', type=str, default='fedcs')
 parser.add_argument('--clients_sample_ratio', type=float, default=1.0) # 设置客户端样本比率
 parser.add_argument('--clients_sample_num', type=int, default=0)
-parser.add_argument('--num_round', type=int, default=5) # 原本设置为100，此处为测试设置为5
+parser.add_argument('--num_round', type=int, default=100) 
 parser.add_argument('--local_epoch', type=int, default=1)
 parser.add_argument('--server_epoch', type=int, default=1)
 parser.add_argument('--lr_eta', type=int, default=80) # 学习率的衰减点
