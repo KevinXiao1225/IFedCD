@@ -1,0 +1,3 @@
+Total number of users: 4201
+Total number of problems: 6804
+Total number of skill: 200

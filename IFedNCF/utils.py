@@ -123,7 +123,7 @@ def negative_sampling(train_data, num_negatives):
             user_item.append(int(row.iid))
             user_rating.append(float(1))
             temp = np.delete(temp, np.where(temp == row.iid))
-            for i in range(num_negatives):
+            for i in range(num_negatives):                    
                 single_user.append(int(row.uid))
                 negative_item = np.random.choice(temp)
                 user_item.append(int(negative_item))

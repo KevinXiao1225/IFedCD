@@ -10,9 +10,9 @@ class Client(torch.nn.Module):
         self.latent_dim = config['latent_dim']
 
         self.embedding_user = torch.nn.Embedding(num_embeddings=1, embedding_dim=self.latent_dim)
-        # user_embedding模块，个数为1，嵌入维度等于item特征表示维度
+        # user_embedding模块，嵌入维度等于item特征表示维度
         self.embedding_item = torch.nn.Embedding(num_embeddings=self.num_items_train, embedding_dim=self.latent_dim)
-        # item_embedding模块，个数为训练集的item数，嵌入维度等于item特征表示维度
+        # item_embedding模块，嵌入维度等于item特征表示维度
 
         self.fc_layers = torch.nn.ModuleList() # torch.nn.ModuleList 是 PyTorch 中的一个容器类，用于存储多个 torch.nn.Module 对象
         # 评分预测模块
